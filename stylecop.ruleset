@@ -7,6 +7,8 @@
     <!-- Parameter should not span multiple lines -->
     <Rule Id="SA1118" Action="None" />
 
+    <Rule Id="SA1200" Action="None"/>
+
     <!-- Constructor should not follow a property -->
     <Rule Id="SA1201" Action="None" />
     
