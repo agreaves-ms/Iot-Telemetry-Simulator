@@ -1,18 +1,15 @@
-FROM mcr.microsoft.com/dotnet/runtime:5.0-buster-slim AS base
-WORKDIR /app
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+ARG TARGETARCH
+WORKDIR /src/src/IotTelemetrySimulator
+COPY src/IotTelemetrySimulator/*.csproj .
+RUN dotnet restore -a $TARGETARCH
 
-FROM mcr.microsoft.com/dotnet/sdk:5.0-buster-slim AS build
 WORKDIR /src
-COPY ["src/IotTelemetrySimulator/IotTelemetrySimulator.csproj", "src/IotTelemetrySimulator/"]
-RUN dotnet restore "src/IotTelemetrySimulator/IotTelemetrySimulator.csproj"
 COPY . .
-WORKDIR "/src/src/IotTelemetrySimulator"
-RUN dotnet build "IotTelemetrySimulator.csproj" -c Release -o /app/build
+WORKDIR /src/src/IotTelemetrySimulator
+RUN dotnet publish --no-restore -o /app/publish -a $TARGETARCH
 
-FROM build AS publish
-RUN dotnet publish "IotTelemetrySimulator.csproj" -c Release -o /app/publish
-
-FROM base AS final
+FROM mcr.microsoft.com/dotnet/runtime:8.0
 WORKDIR /app
-COPY --from=publish /app/publish .
+COPY --from=build /app/publish .
 ENTRYPOINT ["dotnet", "IotTelemetrySimulator.dll"]
