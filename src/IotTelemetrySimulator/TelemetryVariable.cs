@@ -33,6 +33,9 @@
         [JsonProperty("values")]
         public object[] Values { get; set; }
 
+        [JsonProperty("csv")]
+        public TelemetryCsvVariable Csv { get; set; }
+
         IReadOnlyList<string> referencedVariableNames;
 
         public IReadOnlyList<string> GetReferenceVariableNames()

@@ -43,11 +43,11 @@
         }
 
         [Theory]
-        [InlineData(1, 5, 2)]
-        [InlineData(5, 9, null)]
-        [InlineData(null, 2, null)]
-        [InlineData(-3, 2, null)]
-        [InlineData(int.MaxValue - 10, int.MaxValue, 6)]
+        [InlineData(1.0, 5.0, 2)]
+        [InlineData(5.0, 9.0, null)]
+        [InlineData(null, 2.0, null)]
+        [InlineData(-3.0, 2.0, null)]
+        [InlineData(int.MaxValue - 10.0, int.MaxValue - 0.0, 6)]
         public void Counter_With_Threshold_Should_Reset_To_Min(double? min, double? max, int? step)
         {
             var telemetryTemplate = new TelemetryTemplate("{\"val\":\"$.Value\"}", new[] { "Counter" });
@@ -96,7 +96,7 @@
         [InlineData(null, 15.0)]
         [InlineData(10.0, null)]
         [InlineData(0.01, 0.02)]
-        [InlineData(-5, 5)]
+        [InlineData(-5.0, 5.0)]
         public void RandomDouble_Generator(double? min, double? max)
         {
             var telemetryTemplate = new TelemetryTemplate("{\"val\":\"$.Value\"}", new[] { "Value" });
@@ -139,6 +139,70 @@
                     var result = Convert.ToDouble(o);
                     Assert.True(result >= min && result <= max);
                 }
+            }
+        }
+
+        [Fact]
+        public void Csv_Generator()
+        {
+            var sampleCsv = """
+                            Test1,Test2
+                            first1,second1
+                            first2,second2
+                            first3,second3
+                            """;
+            var telemetryTemplate = new TelemetryTemplate(
+                "{\"val\":\"$.Value\"}",
+                new[]
+                {
+                    "Value",
+                });
+            var telemetryVariables = new[]
+            {
+                new TelemetryVariable
+                {
+                    Name = "Value",
+                    Csv = new TelemetryCsvVariable
+                    {
+                        FieldName = "Test1",
+                        String = true,
+                        Contents = sampleCsv,
+                    },
+                },
+            };
+            var telemetryValues = new TelemetryValues(telemetryVariables);
+
+            var payload = new TemplatedPayload(100, telemetryTemplate, telemetryValues);
+
+            var target = new PayloadGenerator(
+                new[]
+                {
+                    payload,
+                },
+                new DefaultRandomizer());
+
+            var expectedValues = new[]
+            {
+                "{\"val\":\"first1\"}",
+                "{\"val\":\"first2\"}",
+                "{\"val\":\"first3\"}",
+                "{\"val\":\"first1\"}",
+                "{\"val\":\"first2\"}",
+            };
+
+            var variables = new Dictionary<string, object>
+            {
+                {
+                    Constants.DeviceIdValueName, "mydevice"
+                },
+            };
+
+            byte[] result;
+            foreach (var expectedValue in expectedValues)
+            {
+                (result, variables) = target.Generate(null, variables);
+                Assert.NotEmpty(variables);
+                Assert.Equal(expectedValue, Encoding.UTF8.GetString(result));
             }
         }
 

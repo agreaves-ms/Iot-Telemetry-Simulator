@@ -4,10 +4,12 @@
     using System.Collections.Generic;
     using System.Linq;
 
-    public class TelemetryValues
+    public class TelemetryValues : IDisposable
     {
         private readonly IRandomizer random = new DefaultRandomizer();
         readonly string machineName;
+
+        private TelemetryCsvValues CsvValues { get; }
 
         public IList<TelemetryVariable> Variables { get; }
 
@@ -15,6 +17,7 @@
         {
             this.Variables = variables;
             this.machineName = Environment.MachineName;
+            this.CsvValues = new TelemetryCsvValues(variables);
         }
 
         public Dictionary<string, object> NextValues(Dictionary<string, object> previous)
@@ -79,6 +82,10 @@
                 {
                     next[val.Name] = val.Values[this.random.Next(val.Values.Length)];
                 }
+                else if (val.Csv != null)
+                {
+                    // Handling this variable in TelemetryCsvVariable
+                }
                 else
                 {
                     if (previous != null && previous.TryGetValue(val.Name, out var prevValue))
@@ -102,6 +109,11 @@
                         next[val.Name] = val.Min == null ? 1 : (int)val.Min;
                     }
                 }
+            }
+
+            foreach (var csvVal in this.CsvValues.NextValues(previous).ToList())
+            {
+                next[csvVal.Key] = csvVal.Value;
             }
 
             // We generate values of sequence vars after the non-sequence vars, because
@@ -177,6 +189,11 @@
         {
             const string chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
             return new string(Enumerable.Repeat(chars, length).Select(s => s[this.random.Next(s.Length)]).ToArray());
+        }
+
+        public void Dispose()
+        {
+            this.CsvValues.Dispose();
         }
     }
 }
